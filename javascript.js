@@ -1,3 +1,6 @@
+
+    
+
 const convertButton = document.querySelector(".convert-button");
 const currencySelectFrom = document.querySelector(".currency-to-select"); // "de"
 const currencySelectTo = document.querySelector(".currency-select"); // "para"
@@ -14,12 +17,26 @@ const toName = document.getElementById("currency-name-to");
 const toValue = document.getElementById("currency-value-to");
 
 // Taxas de câmbio: Preço de 1 unidade da moeda em Reais (BRL)
-const priceInBRL = {
-    BRL: 1,
-    USD: 5.3,
-    EUR: 6.2,
-    BTC: 487735.30
-};
+let exchangeRates = {};
+
+async function loadExchangeRates() {
+    try {
+        const response = await fetch("https://economia.awesomeapi.com.br/last/USD-BRL,EUR-BRL,BTC-BRL");
+        const data = await response.json();
+        exchangeRates = {
+            USD: parseFloat(data.USDBRL.ask),
+            EUR: parseFloat(data.EURBRL.ask),
+            BTC: parseFloat(data.BTCBRL.ask),
+            BRL: 1 // Real é a base
+        };
+    } catch (error) {
+        console.error("Erro ao carregar taxas de câmbio:", error);
+        alert("Erro ao carregar taxas de câmbio. Tente novamente mais tarde.");
+    }
+}
+
+// Carregar taxas ao iniciar
+loadExchangeRates();
 
 // Mapeia o <select> "Converter de" para o código da moeda
 function mapFrom(value) {
@@ -66,7 +83,7 @@ function resetValues() {
 }
 
 // Função principal de conversão (agora só chamada pelo botão)
-function convertValues() {
+async function convertValues() {
     const fromCurrency = mapFrom(currencySelectFrom.value);
     const toCurrency = mapTo(currencySelectTo.value);
 
@@ -84,8 +101,11 @@ function convertValues() {
         return;
     }
 
-    const valueInBRL = inputNumber * priceInBRL[fromCurrency];
-    const finalValue = valueInBRL / priceInBRL[toCurrency];
+    // Recarregar taxas se necessário (opcional, mas bom para dados atualizados)
+    await loadExchangeRates();
+
+    const valueInBRL = inputNumber * exchangeRates[fromCurrency];
+    const finalValue = valueInBRL / exchangeRates[toCurrency];
 
     fromValue.textContent = formatByCurrency(inputNumber, fromCurrency);
     toValue.textContent = formatByCurrency(finalValue, toCurrency);
